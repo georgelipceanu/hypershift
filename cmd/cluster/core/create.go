@@ -43,7 +43,7 @@ import (
 func DefaultOptions() *RawCreateOptions {
 	return &RawCreateOptions{
 		Namespace:                      "clusters",
-		Name:                           "",
+		Name:                           "example",
 		ControlPlaneAvailabilityPolicy: string(hyperv1.SingleReplica),
 		ServiceCIDR:                    []string{globalconfig.DefaultIPv4ServiceCIDR},
 		ClusterCIDR:                    []string{globalconfig.DefaultIPv4ClusterCIDR},
