@@ -1,6 +1,7 @@
 site_name: HyperShift
 theme:
   name: material
+  custom_dir: overrides
   features:
   - navigation.tabs
   - navigation.indexes
@@ -26,7 +27,9 @@ repo_url: https://github.com/openshift/hypershift
 edit_uri: edit/main/docs/content
 repo_name: openshift/hypershift
 extra_javascript:
-  - https://unpkg.com/mermaid@11.2.0/dist/mermaid.min.js
+  - assets/javascripts/chatbot.js
+extra_css:
+  - assets/stylesheets/chatbot.css
 markdown_extensions:
 - toc:
     toc_depth: "2-3"

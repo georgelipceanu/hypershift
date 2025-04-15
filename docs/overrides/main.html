@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {{ super() }}  {# keep the existing page content #}
+
+  <button id="open_button" class="md-button" title="Open Chat" onclick="openChat()">
+    {% include ".icons/material/forum.svg" %}  Chat
+  </button>
+
+  <div id="chat_container" style="display: none;">
+    <div id="chat_header">
+      <button id="close_button" title="Close Chat" onclick="closeChat()">✕</button>
+    </div>
+    <div id="chat_content">
+      <div id="chatMessages"></div>
+      <div id="chatSpinner" style="display: none; text-align: center;">
+        <div class="spinner"></div>
+      </div>      
+    </div>
+    <input type="text" id="chatInput" placeholder="Type your question..." />
+    <button id="sendBtn">Send</button>
+  </div>
+{% endblock %}
