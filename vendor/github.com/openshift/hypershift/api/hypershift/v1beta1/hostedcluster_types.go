@@ -1887,6 +1887,50 @@ const (
 	ScaleUpAndScaleDown ScalingType = "ScaleUpAndScaleDown"
 )
 
+// LocalStorageScaleDownPolicy controls whether nodes running pods with local storage are
+// eligible for scale-down.
+// +kubebuilder:validation:Enum="";Skip;Consider
+type LocalStorageScaleDownPolicy string
+
+const (
+	// LocalStorageScaleDownSkip protects nodes running pods with local storage from scale-down.
+	LocalStorageScaleDownSkip LocalStorageScaleDownPolicy = "Skip"
+
+	// LocalStorageScaleDownConsider allows nodes running pods with local storage to be
+	// considered for scale-down like any other node.
+	LocalStorageScaleDownConsider LocalStorageScaleDownPolicy = "Consider"
+)
+
+// SimilarNodeGroupBalancingPolicy controls whether the autoscaler balances similar node
+// groups when scaling up.
+// +kubebuilder:validation:Enum="";Balance;DoNotBalance
+type SimilarNodeGroupBalancingPolicy string
+
+const (
+	// SimilarNodeGroupBalancingBalance directs the autoscaler to keep similar node groups at
+	// similar sizes when scaling up.
+	SimilarNodeGroupBalancingBalance SimilarNodeGroupBalancingPolicy = "Balance"
+
+	// SimilarNodeGroupBalancingDoNotBalance allows the autoscaler to scale up similar node
+	// groups without balancing their sizes.
+	SimilarNodeGroupBalancingDoNotBalance SimilarNodeGroupBalancingPolicy = "DoNotBalance"
+)
+
+// DaemonSetUtilizationPolicy controls whether DaemonSet pod resource requests are included
+// when calculating node utilization for scale-down eligibility.
+// +kubebuilder:validation:Enum="";Include;Exclude
+type DaemonSetUtilizationPolicy string
+
+const (
+	// DaemonSetUtilizationInclude counts DaemonSet pod resource requests toward node
+	// utilization for scale-down eligibility.
+	DaemonSetUtilizationInclude DaemonSetUtilizationPolicy = "Include"
+
+	// DaemonSetUtilizationExclude excludes DaemonSet pod resource requests from node
+	// utilization for scale-down eligibility.
+	DaemonSetUtilizationExclude DaemonSetUtilizationPolicy = "Exclude"
+)
+
 // ClusterAutoscaling specifies auto-scaling behavior that applies to all
 // NodePools associated with a control plane.
 // +kubebuilder:validation:XValidation:rule="self.scaling == 'ScaleUpAndScaleDown' ? true : !has(self.scaleDown)",message="scaleDown can only be set when scaling is ScaleUpAndScaleDown"
@@ -1991,6 +2035,40 @@ type ClusterAutoscaling struct {
 	//
 	// +optional
 	Expanders []ExpanderString `json:"expanders,omitempty"`
+
+	// localStorageScaleDown controls whether the autoscaler considers nodes running pods
+	// with local storage, such as EmptyDir or HostPath volumes, as eligible for scale-down.
+	// Skip protects such nodes from scale-down. Consider allows the autoscaler to remove them
+	// like any other node. This affects the "--skip-nodes-with-local-storage" flag on
+	// cluster-autoscaler.
+	//
+	// When omitted, this defaults to Consider, preserving HyperShift's current behavior.
+	//
+	// +optional
+	// +openshift:enable:FeatureGate=HostedClusterAutoscalerConfiguration
+	LocalStorageScaleDown LocalStorageScaleDownPolicy `json:"localStorageScaleDown,omitempty"`
+
+	// similarNodeGroupBalancing controls whether the autoscaler tries to keep similar node
+	// groups, meaning NodePools with the same instance type and labels, at similar sizes when
+	// scaling up. This affects the "--balance-similar-node-groups" flag on cluster-autoscaler.
+	//
+	// When omitted, this defaults to Balance, preserving HyperShift's current behavior.
+	//
+	// +optional
+	// +openshift:enable:FeatureGate=HostedClusterAutoscalerConfiguration
+	SimilarNodeGroupBalancing SimilarNodeGroupBalancingPolicy `json:"similarNodeGroupBalancing,omitempty"`
+
+	// daemonSetUtilization controls whether DaemonSet pod resource requests are included when
+	// the autoscaler calculates node utilization for scale-down eligibility. Include counts
+	// DaemonSet pod requests toward utilization. Exclude ignores them. This affects the
+	// "--ignore-daemonsets-utilization" flag on cluster-autoscaler.
+	//
+	// When omitted, no flag is rendered and the autoscaler's own default behavior of including
+	// DaemonSet pod requests applies.
+	//
+	// +optional
+	// +openshift:enable:FeatureGate=HostedClusterAutoscalerConfiguration
+	DaemonSetUtilization DaemonSetUtilizationPolicy `json:"daemonSetUtilization,omitempty"`
 }
 
 // EtcdManagementType is a enum specifying the strategy for managing the cluster's etcd instance

@@ -54,6 +54,9 @@
                     },
                     {
                         "name": "HCPUserFacingOperatorLogs"
+                    },
+                    {
+                        "name": "HostedClusterAutoscalerConfiguration"
                     }
                 ],
                 "version": ""

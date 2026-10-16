@@ -284,6 +284,20 @@ spec:
                     - message: Each balancingIgnoredLabels item must be a valid label
                         key
                       rule: self.all(l, l.matches('^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?[a-zA-Z0-9]([a-zA-Z0-9_.-]{0,61}[a-zA-Z0-9])?$'))
+                  daemonSetUtilization:
+                    description: |-
+                      daemonSetUtilization controls whether DaemonSet pod resource requests are included when
+                      the autoscaler calculates node utilization for scale-down eligibility. Include counts
+                      DaemonSet pod requests toward utilization. Exclude ignores them. This affects the
+                      "--ignore-daemonsets-utilization" flag on cluster-autoscaler.
+
+                      When omitted, no flag is rendered and the autoscaler's own default behavior of including
+                      DaemonSet pod requests applies.
+                    enum:
+                    - ""
+                    - Include
+                    - Exclude
+                    type: string
                   expanders:
                     description: |-
                       expanders guide the autoscaler in choosing node groups during scale-out.
@@ -305,6 +319,20 @@ spec:
                     maxItems: 3
                     minItems: 1
                     type: array
+                  localStorageScaleDown:
+                    description: |-
+                      localStorageScaleDown controls whether the autoscaler considers nodes running pods
+                      with local storage, such as EmptyDir or HostPath volumes, as eligible for scale-down.
+                      Skip protects such nodes from scale-down. Consider allows the autoscaler to remove them
+                      like any other node. This affects the "--skip-nodes-with-local-storage" flag on
+                      cluster-autoscaler.
+
+                      When omitted, this defaults to Consider, preserving HyperShift's current behavior.
+                    enum:
+                    - ""
+                    - Skip
+                    - Consider
+                    type: string
                   maxFreeDifferenceRatioPercent:
                     description: |-
                       maxFreeDifferenceRatioPercent sets the maximum difference ratio for free resources between similar node groups. This parameter controls how strict the similarity check is when comparing node groups for load balancing.
@@ -421,6 +449,18 @@ spec:
                     enum:
                     - ScaleUpOnly
                     - ScaleUpAndScaleDown
+                    type: string
+                  similarNodeGroupBalancing:
+                    description: |-
+                      similarNodeGroupBalancing controls whether the autoscaler tries to keep similar node
+                      groups, meaning NodePools with the same instance type and labels, at similar sizes when
+                      scaling up. This affects the "--balance-similar-node-groups" flag on cluster-autoscaler.
+
+                      When omitted, this defaults to Balance, preserving HyperShift's current behavior.
+                    enum:
+                    - ""
+                    - Balance
+                    - DoNotBalance
                     type: string
                 type: object
                 x-kubernetes-validations:

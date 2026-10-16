@@ -7,6 +7,7 @@ import (
 
 	hyperv1 "github.com/openshift/hypershift/api/hypershift/v1beta1"
 	"github.com/openshift/hypershift/control-plane-operator/controllers/hostedcontrolplane/manifests"
+	cpofeaturegates "github.com/openshift/hypershift/control-plane-operator/featuregates"
 	component "github.com/openshift/hypershift/support/controlplane-component"
 	"github.com/openshift/hypershift/support/podspec"
 
@@ -38,6 +39,9 @@ const (
 	ScaleDownUnneededTimeArg         AutoscalerArg = "--scale-down-unneeded-time"
 	ScaleDownUtilizationThresholdArg AutoscalerArg = "--scale-down-utilization-threshold"
 	MaxFreeDifferenceRatioArg        AutoscalerArg = "--max-free-difference-ratio"
+	SkipNodesWithLocalStorageArg     AutoscalerArg = "--skip-nodes-with-local-storage"
+	BalanceSimilarNodeGroupsArg      AutoscalerArg = "--balance-similar-node-groups"
+	IgnoreDaemonsetsUtilizationArg   AutoscalerArg = "--ignore-daemonsets-utilization"
 )
 
 // Constants for expander flags
@@ -88,6 +92,11 @@ func (a AutoscalerArg) Value(v interface{}) string {
 
 func autoscalerArgs(options *hyperv1.ClusterAutoscaling, platformType hyperv1.PlatformType, log logr.Logger) []string {
 	args := []string{}
+	args = append(args, SkipNodesWithLocalStorageArg.Value(skipNodesWithLocalStorage(options)))
+	args = append(args, BalanceSimilarNodeGroupsArg.Value(balanceSimilarNodeGroups(options)))
+	if arg, ok := ignoreDaemonsetsUtilizationArg(options); ok {
+		args = append(args, arg)
+	}
 
 	switch options.Scaling {
 	case hyperv1.ScaleUpOnly:
@@ -143,11 +152,50 @@ func autoscalerArgs(options *hyperv1.ClusterAutoscaling, platformType hyperv1.Pl
 		args = append(args, ExpanderArg.Value(strings.Join([]string{priorityFlag, leastWasteFlag}, ",")))
 	}
 
-	// Since we hardcode "balance-similar-node-groups" to true in the deployment yaml
 	// Append basic ignore labels for a specific cloud provider.
 	args = appendBasicIgnoreLabels(args, platformType)
 
 	return args
+}
+
+// skipNodesWithLocalStorage returns the effective value for the
+// "--skip-nodes-with-local-storage" flag. The field only takes effect when the
+// HostedClusterAutoscalerConfiguration feature gate is enabled; otherwise HyperShift's
+// historical default of false is preserved.
+func skipNodesWithLocalStorage(options *hyperv1.ClusterAutoscaling) bool {
+	if !cpofeaturegates.Gate().Enabled(cpofeaturegates.HostedClusterAutoscalerConfiguration) {
+		return false
+	}
+	return options.LocalStorageScaleDown == hyperv1.LocalStorageScaleDownSkip
+}
+
+// balanceSimilarNodeGroups returns the effective value for the
+// "--balance-similar-node-groups" flag. The field only takes effect when the
+// HostedClusterAutoscalerConfiguration feature gate is enabled; otherwise HyperShift's
+// historical default of true is preserved.
+func balanceSimilarNodeGroups(options *hyperv1.ClusterAutoscaling) bool {
+	if !cpofeaturegates.Gate().Enabled(cpofeaturegates.HostedClusterAutoscalerConfiguration) {
+		return true
+	}
+	return options.SimilarNodeGroupBalancing != hyperv1.SimilarNodeGroupBalancingDoNotBalance
+}
+
+// ignoreDaemonsetsUtilizationArg returns the rendered "--ignore-daemonsets-utilization" flag
+// and whether it should be emitted. The flag is only rendered when the
+// HostedClusterAutoscalerConfiguration feature gate is enabled and DaemonSetUtilization is
+// explicitly set; otherwise no flag is emitted, preserving the autoscaler's own default.
+func ignoreDaemonsetsUtilizationArg(options *hyperv1.ClusterAutoscaling) (string, bool) {
+	if !cpofeaturegates.Gate().Enabled(cpofeaturegates.HostedClusterAutoscalerConfiguration) {
+		return "", false
+	}
+	switch options.DaemonSetUtilization {
+	case hyperv1.DaemonSetUtilizationExclude:
+		return IgnoreDaemonsetsUtilizationArg.Value(true), true
+	case hyperv1.DaemonSetUtilizationInclude:
+		return IgnoreDaemonsetsUtilizationArg.Value(false), true
+	default:
+		return "", false
+	}
 }
 
 func ScaleDownArgs(sd *hyperv1.ScaleDownConfig) []string {
